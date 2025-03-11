@@ -1,0 +1,109 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 96.5%;
+    --foreground: 0 0% 7%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 7%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+
+    --primary: 354 100% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 207 47% 38%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 89%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 89%;
+    --accent-foreground: 0 0% 7%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 0 0% 7%;
+
+    --radius: 0.25rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-nyt-background text-nyt-black font-serif antialiased;
+  }
+  
+  /* First letter styling for articles */
+  .article-content > p:first-of-type::first-letter {
+    @apply text-7xl font-bold float-left mr-2 mt-1;
+    line-height: 0.8;
+  }
+  
+  /* Pull quote styling */
+  .pull-quote {
+    @apply text-2xl italic border-l-4 border-nyt-gray-light pl-6 my-8 max-w-2xl mx-auto text-nyt-gray-dark;
+    line-height: 1.4;
+  }
+  
+  /* Link styling with underline animation */
+  .animated-link {
+    @apply relative inline-block;
+  }
+  
+  .animated-link::after {
+    @apply content-[''] absolute w-full scale-x-0 h-0.5 bottom-0 left-0 bg-nyt-blue origin-bottom-right transition-transform duration-300;
+  }
+  
+  .animated-link:hover::after {
+    @apply scale-x-100 origin-bottom-left;
+  }
+  
+  /* Image hover effect */
+  .image-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .image-hover:hover {
+    @apply brightness-110;
+  }
+  
+  /* Section transitions */
+  .section-transition {
+    @apply transition-all duration-500 ease-in-out;
+  }
+}
+
+@layer components {
+  .container-fluid {
+    @apply w-full px-4 md:px-8 lg:px-16 mx-auto max-w-7xl;
+  }
+  
+  .nav-link {
+    @apply text-nyt-black hover:text-nyt-blue transition-colors duration-200 text-sm uppercase tracking-wide font-sans;
+  }
+  
+  .heading-divider {
+    @apply w-full h-px bg-nyt-gray-light my-6;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
