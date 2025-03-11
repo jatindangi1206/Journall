@@ -1,13 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, Search, User, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Menu, Search, User, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getCurrentUser, logout } from '@/lib/authService';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentDate] = useState(new Date());
+  const user = getCurrentUser();
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -29,13 +33,27 @@ const Navbar = () => {
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
+  const handleAuth = () => {
+    if (user) {
+      logout();
+      toast.success('Logged out successfully');
+      navigate('/');
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <header className="w-full">
       {/* Top date and subscription bar */}
       <div className="w-full bg-white border-b border-nyt-gray-light">
         <div className="container-fluid py-2 flex justify-between items-center">
           <p className="text-caption font-sans text-nyt-gray">{formatDate(currentDate)}</p>
-          <Link to="/subscribe" className="text-caption font-sans text-nyt-blue animated-link">Subscribe Now</Link>
+          {user ? (
+            <span className="text-caption font-sans text-nyt-blue">Welcome, {user.name}</span>
+          ) : (
+            <Link to="/subscribe" className="text-caption font-sans text-nyt-blue animated-link">Subscribe Now</Link>
+          )}
         </div>
       </div>
 
@@ -65,9 +83,24 @@ const Navbar = () => {
               <button aria-label="Search" className="p-2 transition-transform duration-300 hover:scale-105">
                 <Search className="h-5 w-5" />
               </button>
-              <button aria-label="Account" className="p-2 transition-transform duration-300 hover:scale-105">
-                <User className="h-5 w-5" />
+              <button
+                onClick={handleAuth}
+                aria-label={user ? 'Logout' : 'Login'}
+                className="p-2 transition-transform duration-300 hover:scale-105"
+              >
+                {user ? (
+                  <LogOut className="h-5 w-5" />
+                ) : (
+                  <User className="h-5 w-5" />
+                )}
               </button>
+              {user && (
+                <Link to="/dashboard">
+                  <Button variant="outline" size="sm" className="hidden md:inline-flex">
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -105,6 +138,15 @@ const Navbar = () => {
           </div>
 
           <div className="flex flex-col space-y-6">
+            {user && (
+              <Link 
+                to="/dashboard" 
+                className="text-headline font-serif hover:text-nyt-blue transition-colors" 
+                onClick={toggleMenu}
+              >
+                Dashboard
+              </Link>
+            )}
             <Link to="/section/politics" className="text-headline font-serif hover:text-nyt-blue transition-colors" onClick={toggleMenu}>Politics</Link>
             <Link to="/section/business" className="text-headline font-serif hover:text-nyt-blue transition-colors" onClick={toggleMenu}>Business</Link>
             <Link to="/section/technology" className="text-headline font-serif hover:text-nyt-blue transition-colors" onClick={toggleMenu}>Technology</Link>

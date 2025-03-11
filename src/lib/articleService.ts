@@ -1,4 +1,3 @@
-
 export interface ArticleMetadata {
   id: string;
   title: string;
@@ -82,6 +81,86 @@ export const publishArticle = (id: string): Article | undefined => {
   return article;
 };
 
+// Enhanced content analysis for better categorization
+const analyzeContent = (content: string[]): string => {
+  const categoryPatterns = [
+    { pattern: /(politic|government|election|congress|senate|democrat|republican)/i, category: 'Politics' },
+    { pattern: /(tech|software|digital|computer|internet|AI|blockchain|startup)/i, category: 'Technology' },
+    { pattern: /(art|culture|music|film|theater|gallery|exhibition|performance)/i, category: 'Arts' },
+    { pattern: /(business|economy|market|stock|trade|finance|company)/i, category: 'Business' },
+    { pattern: /(science|research|study|discovery|innovation|experiment)/i, category: 'Science' },
+    { pattern: /(sport|game|athlete|tournament|championship|team|player)/i, category: 'Sports' }
+  ];
+
+  const wordCounts = new Map<string, number>();
+  
+  content.forEach(paragraph => {
+    categoryPatterns.forEach(({ pattern, category }) => {
+      const matches = paragraph.match(pattern) || [];
+      wordCounts.set(category, (wordCounts.get(category) || 0) + matches.length);
+    });
+  });
+
+  let maxCount = 0;
+  let detectedCategory = 'General';
+
+  wordCounts.forEach((count, category) => {
+    if (count > maxCount) {
+      maxCount = count;
+      detectedCategory = category;
+    }
+  });
+
+  return detectedCategory;
+};
+
+// Extract author information from text
+const extractAuthor = (text: string): string => {
+  const authorPatterns = [
+    /by[\s:]+([\w\s]+?)(?=\n|$)/i,
+    /author[\s:]+([\w\s]+?)(?=\n|$)/i,
+    /written by[\s:]+([\w\s]+?)(?=\n|$)/i
+  ];
+
+  for (const pattern of authorPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]?.trim()) {
+      return match[1].trim();
+    }
+  }
+
+  return 'Unknown Author';
+};
+
+// Enhanced text processing
+const processText = (text: string) => {
+  // Split into paragraphs, handling multiple line break types
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
+
+  // Extract title (first non-empty line)
+  const title = paragraphs[0] || 'Untitled Document';
+
+  // Remove title from paragraphs
+  const content = paragraphs.slice(1);
+
+  // Extract author
+  const fullText = text.replace(/\n+/g, ' ');
+  const author = extractAuthor(fullText);
+
+  // Analyze content for category
+  const category = analyzeContent(content);
+
+  return {
+    title,
+    content,
+    category,
+    author
+  };
+};
+
 // Extract text content from uploaded files
 export const extractContentFromFile = async (file: File): Promise<{
   title: string;
@@ -89,9 +168,6 @@ export const extractContentFromFile = async (file: File): Promise<{
   category: string;
   author: string;
 }> => {
-  // This is a simplified example. In production, you would need server-side
-  // processing for proper file extraction from PDFs, Word docs, etc.
-  
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -102,61 +178,16 @@ export const extractContentFromFile = async (file: File): Promise<{
         }
         
         const text = event.target.result.toString();
-        
-        // Simple parsing logic - would be more sophisticated in production
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        
-        // Assume first line is title
-        const title = lines[0] || 'Untitled Document';
-        
-        // Try to extract author - look for "By" or "Author:" pattern
-        let author = 'Unknown Author';
-        let authorIndex = -1;
-        
-        for (let i = 1; i < Math.min(5, lines.length); i++) {
-          if (lines[i].toLowerCase().startsWith('by ') || 
-              lines[i].toLowerCase().includes('author:')) {
-            author = lines[i].replace(/^by |author:/i, '').trim();
-            authorIndex = i;
-            break;
-          }
-        }
-        
-        // Extract content, skipping title and author
-        const content = lines
-          .filter((_, index) => index !== 0 && index !== authorIndex)
-          .map(line => line.trim())
-          .filter(line => line.length > 0);
-        
-        // Try to determine category from content
-        const academicKeywords = [
-          { term: 'research', category: 'Research' },
-          { term: 'study', category: 'Study' },
-          { term: 'analysis', category: 'Analysis' },
-          { term: 'review', category: 'Review' },
-          { term: 'paper', category: 'Academic' }
-        ];
-        
-        let category = 'Academic';
-        
-        // Simple category detection
-        for (const keyword of academicKeywords) {
-          if (content.some(paragraph => 
-            paragraph.toLowerCase().includes(keyword.term)
-          )) {
-            category = keyword.category;
-            break;
-          }
-        }
+        const processed = processText(text);
         
         resolve({
-          title,
-          content,
-          category,
-          author
+          title: processed.title,
+          content: processed.content,
+          category: processed.category,
+          author: processed.author
         });
       } catch (error) {
-        reject(new Error("Failed to parse document"));
+        reject(new Error("Failed to process document"));
       }
     };
     
@@ -164,9 +195,7 @@ export const extractContentFromFile = async (file: File): Promise<{
       reject(new Error("Error reading file"));
     };
     
-    // Read as text for basic extraction
-    // In production, you would need different strategies for different file types
+    // Read as text
     reader.readAsText(file);
   });
 };
-
