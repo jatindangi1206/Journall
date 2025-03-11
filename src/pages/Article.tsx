@@ -4,6 +4,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import SectionDivider from '../components/ui/SectionDivider';
 import ArticleCard from '../components/ui/ArticleCard';
+import FormattedContent from '../components/editor/FormattedContent';
 import { Share2, Bookmark, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Article as ArticleType, getArticleById, getPublishedArticles } from '../lib/articleService';
 import { toast } from 'sonner';
@@ -147,20 +148,26 @@ const Article = () => {
             
             {/* Article Body */}
             <article className="flex-grow">
-              <div className="article-content font-serif text-body text-nyt-black space-y-6">
+              <div className="article-content space-y-6">
                 {article.content.map((paragraph, index) => {
                   // Insert pull quote after 2nd paragraph
                   if (index === 1 && article.pullQuote) {
                     return (
                       <React.Fragment key={index}>
-                        <p>{paragraph}</p>
-                        <blockquote className="pull-quote">
+                        <FormattedContent content={paragraph} className="font-serif text-body text-nyt-black" />
+                        <blockquote className="pull-quote my-8">
                           {article.pullQuote}
                         </blockquote>
                       </React.Fragment>
                     );
                   }
-                  return <p key={index}>{paragraph}</p>;
+                  return (
+                    <FormattedContent 
+                      key={index} 
+                      content={paragraph}
+                      className="font-serif text-body text-nyt-black"
+                    />
+                  );
                 })}
               </div>
               
