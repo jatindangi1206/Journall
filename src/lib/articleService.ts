@@ -16,152 +16,85 @@ export interface Article extends ArticleMetadata {
   pullQuote?: string;
 }
 
-// Helper to generate a unique ID
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+const API_URL = 'http://localhost:3000/api/articles';
 
 // Get all articles
-export const getArticles = (): Article[] => {
-  const articles = localStorage.getItem('articles');
-  return articles ? JSON.parse(articles) : [];
+export const getArticles = async (): Promise<Article[]> => {
+  const response = await fetch(API_URL);
+  if (!response.ok) {
+    throw new Error('Failed to fetch articles');
+  }
+  return response.json();
 };
 
 // Get a single article by ID
-export const getArticleById = (id: string): Article | undefined => {
-  const articles = getArticles();
-  return articles.find(article => article.id === id);
+export const getArticleById = async (id: string): Promise<Article | undefined> => {
+  const response = await fetch(`${API_URL}/${id}`);
+  if (!response.ok) {
+    if (response.status === 404) return undefined;
+    throw new Error('Failed to fetch article');
+  }
+  return response.json();
 };
 
 // Save a new article or update an existing one
-export const saveArticle = (article: Omit<Article, 'id'> & { id?: string }): Article => {
-  const articles = getArticles();
-  const newArticle = {
-    ...article,
-    id: article.id || generateId()
-  };
-  
-  const existingIndex = articles.findIndex(a => a.id === newArticle.id);
-  
-  if (existingIndex >= 0) {
-    articles[existingIndex] = newArticle;
-  } else {
-    articles.push(newArticle);
+export const saveArticle = async (article: Omit<Article, 'id'> & { id?: string }): Promise<Article> => {
+  const method = article.id ? 'PUT' : 'POST';
+  const url = article.id ? `${API_URL}/${article.id}` : API_URL;
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(article),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to save article');
   }
-  
-  localStorage.setItem('articles', JSON.stringify(articles));
-  return newArticle;
+  return response.json();
 };
 
 // Delete an article
-export const deleteArticle = (id: string): void => {
-  const articles = getArticles();
-  const filteredArticles = articles.filter(article => article.id !== id);
-  localStorage.setItem('articles', JSON.stringify(filteredArticles));
+export const deleteArticle = async (id: string): Promise<void> => {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete article');
+  }
 };
 
 // Get all drafts
-export const getDrafts = (): Article[] => {
-  return getArticles().filter(article => article.isDraft);
+export const getDrafts = async (): Promise<Article[]> => {
+  const response = await fetch(`${API_URL}/status/drafts`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch drafts');
+  }
+  return response.json();
 };
 
 // Get all published articles
-export const getPublishedArticles = (): Article[] => {
-  return getArticles().filter(article => !article.isDraft);
+export const getPublishedArticles = async (): Promise<Article[]> => {
+  const response = await fetch(`${API_URL}/status/published`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch published articles');
+  }
+  return response.json();
 };
 
 // Publish a draft
-export const publishArticle = (id: string): Article | undefined => {
-  const article = getArticleById(id);
+export const publishArticle = async (id: string): Promise<Article | undefined> => {
+  const article = await getArticleById(id);
   if (article && article.isDraft) {
     const updatedArticle = { ...article, isDraft: false };
-    saveArticle(updatedArticle);
-    return updatedArticle;
+    return saveArticle(updatedArticle);
   }
   return article;
 };
 
-// Enhanced content analysis for better categorization
-const analyzeContent = (content: string[]): string => {
-  const categoryPatterns = [
-    { pattern: /(politic|government|election|congress|senate|democrat|republican)/i, category: 'Politics' },
-    { pattern: /(tech|software|digital|computer|internet|AI|blockchain|startup)/i, category: 'Technology' },
-    { pattern: /(art|culture|music|film|theater|gallery|exhibition|performance)/i, category: 'Arts' },
-    { pattern: /(business|economy|market|stock|trade|finance|company)/i, category: 'Business' },
-    { pattern: /(science|research|study|discovery|innovation|experiment)/i, category: 'Science' },
-    { pattern: /(sport|game|athlete|tournament|championship|team|player)/i, category: 'Sports' }
-  ];
-
-  const wordCounts = new Map<string, number>();
-  
-  content.forEach(paragraph => {
-    categoryPatterns.forEach(({ pattern, category }) => {
-      const matches = paragraph.match(pattern) || [];
-      wordCounts.set(category, (wordCounts.get(category) || 0) + matches.length);
-    });
-  });
-
-  let maxCount = 0;
-  let detectedCategory = 'General';
-
-  wordCounts.forEach((count, category) => {
-    if (count > maxCount) {
-      maxCount = count;
-      detectedCategory = category;
-    }
-  });
-
-  return detectedCategory;
-};
-
-// Extract author information from text
-const extractAuthor = (text: string): string => {
-  const authorPatterns = [
-    /by[\s:]+([\w\s]+?)(?=\n|$)/i,
-    /author[\s:]+([\w\s]+?)(?=\n|$)/i,
-    /written by[\s:]+([\w\s]+?)(?=\n|$)/i
-  ];
-
-  for (const pattern of authorPatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]?.trim()) {
-      return match[1].trim();
-    }
-  }
-
-  return 'Unknown Author';
-};
-
-// Enhanced text processing
-const processText = (text: string) => {
-  // Split into paragraphs, handling multiple line break types
-  const paragraphs = text
-    .split(/\n\s*\n/)
-    .map(p => p.trim())
-    .filter(p => p.length > 0);
-
-  // Extract title (first non-empty line)
-  const title = paragraphs[0] || 'Untitled Document';
-
-  // Remove title from paragraphs
-  const content = paragraphs.slice(1);
-
-  // Extract author
-  const fullText = text.replace(/\n+/g, ' ');
-  const author = extractAuthor(fullText);
-
-  // Analyze content for category
-  const category = analyzeContent(content);
-
-  return {
-    title,
-    content,
-    category,
-    author
-  };
-};
-
-// Extract text content from uploaded files
+// Process text content from uploaded files
 export const extractContentFromFile = async (file: File): Promise<{
   title: string;
   content: string[];
@@ -171,20 +104,20 @@ export const extractContentFromFile = async (file: File): Promise<{
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         if (!event.target?.result) {
           throw new Error("Failed to read file");
         }
         
         const text = event.target.result.toString();
-        const processed = processText(text);
+        const lines = text.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
         
         resolve({
-          title: processed.title,
-          content: processed.content,
-          category: processed.category,
-          author: processed.author
+          title: lines[0] || 'Untitled Document',
+          content: lines.slice(1),
+          category: 'General',
+          author: 'Unknown Author'
         });
       } catch (error) {
         reject(new Error("Failed to process document"));
@@ -195,7 +128,6 @@ export const extractContentFromFile = async (file: File): Promise<{
       reject(new Error("Error reading file"));
     };
     
-    // Read as text
     reader.readAsText(file);
   });
 };

@@ -15,10 +15,22 @@ const articleToCardProps = (article: Article) => ({
 
 const Index = () => {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const publishedArticles = getPublishedArticles();
-    setArticles(publishedArticles);
+    const fetchArticles = async () => {
+      try {
+        setIsLoading(true);
+        const publishedArticles = await getPublishedArticles();
+        setArticles(publishedArticles);
+      } catch (error) {
+        console.error('Failed to fetch articles:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArticles();
   }, []);
 
   // Get the most recent article as featured
@@ -39,6 +51,18 @@ const Index = () => {
   const politicsArticles = getArticlesByCategory('Politics');
   const technologyArticles = getArticlesByCategory('Technology');
   const artsArticles = getArticlesByCategory('Arts');
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container-fluid py-8">
+          <p className="text-center text-gray-500">Loading articles...</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (articles.length === 0) {
     return (

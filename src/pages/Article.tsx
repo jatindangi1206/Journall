@@ -15,33 +15,47 @@ const Article = () => {
   const [article, setArticle] = useState<ArticleType | null>(null);
   const [relatedArticles, setRelatedArticles] = useState<ArticleType[]>([]);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) {
-      navigate('/');
-      return;
-    }
+    const fetchData = async () => {
+      if (!id) {
+        navigate('/');
+        return;
+      }
 
-    // Fetch the article
-    const fetchedArticle = getArticleById(id);
-    if (!fetchedArticle || fetchedArticle.isDraft) {
-      toast.error('Article not found');
-      navigate('/');
-      return;
-    }
+      try {
+        setIsLoading(true);
+        
+        // Fetch the article
+        const fetchedArticle = await getArticleById(id);
+        if (!fetchedArticle || fetchedArticle.isDraft) {
+          toast.error('Article not found');
+          navigate('/');
+          return;
+        }
 
-    // Get related articles (same category, excluding current article)
-    const allPublished = getPublishedArticles();
-    const related = allPublished
-      .filter(a => a.category === fetchedArticle.category && a.id !== id)
-      .slice(0, 3);
+        // Get related articles (same category, excluding current article)
+        const allPublished = await getPublishedArticles();
+        const related = allPublished
+          .filter(a => a.category === fetchedArticle.category && a.id !== id)
+          .slice(0, 3);
 
-    setArticle(fetchedArticle);
-    setRelatedArticles(related);
-    window.scrollTo(0, 0);
+        setArticle(fetchedArticle);
+        setRelatedArticles(related);
+        window.scrollTo(0, 0);
+      } catch (error) {
+        toast.error('Failed to load article');
+        navigate('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id, navigate]);
 
-  if (!article) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -52,6 +66,8 @@ const Article = () => {
       </div>
     );
   }
+
+  if (!article) return null;
 
   return (
     <div className="min-h-screen flex flex-col">
